@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brother Black Cleaner</title>
+    <link href="https://brother.ru/favicon.ico" rel="icon">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #dragHint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #666;
+            font-size: 1.2em;
+            display: none;
+        }
+        #controls {
+            margin-bottom: 10px;
+        }
+        #controls button, #controls input {
+            margin: 5px;
+            padding: 10px 20px;
+            border: none;
+            background-color: #0033cc;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #controls button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #canvasContainer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            visibility: hidden;
+        }
+        canvas {
+            max-height: 50vh;
+            width: auto;
+            border: 1px solid #ccc;
+        }
+        ::-webkit-file-upload-button {
+            display: none;
+        }
+        footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            background-color: #333;
+            color: white;
+        }
+        a {
+            color: white;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="dragHint">Drag and drop an image here or use the file input below</div>
+    <div id="controls">
+        <label for="imageInput">Choose Image</label>
+        <input type="file" id="imageInput" accept="image/*">
+        <input type="number" id="percentInput" min="0" max="100" value="3" title="Enter percentage">
+        <label for="percentInput">%</label>
+        <button id="processButton" style="display: none;" disabled>Process Image</button>
+        <button id="clearButton" style="display: none;">Clear</button>
+    </div>
+    <div id="canvasContainer">
+        <canvas id="beforeCanvas"></canvas>
+        <canvas id="afterCanvas"></canvas>
+    </div>
+    <footer>
+        <p>
+            <a href="https://github.com/Relorer/brother_black_cleaner" target="_blank" rel="noopener noreferrer">
+                <i class="fab fa-github"></i> GitHub
+            </a>
+        </p>
+    </footer>
+    <script>
+        const elements = {
+            imageInput: document.getElementById("imageInput"),
+            processButton: document.getElementById("processButton"),
+            clearButton: document.getElementById("clearButton"),
+            beforeCanvas: document.getElementById("beforeCanvas"),
+            afterCanvas: document.getElementById("afterCanvas"),
+            dragHint: document.getElementById("dragHint"),
+            canvasContainer: document.getElementById("canvasContainer"),
+            percentInput: document.getElementById("percentInput")
+        };
+    
+        const beforeCtx = elements.beforeCanvas.getContext("2d");
+        const afterCtx = elements.afterCanvas.getContext("2d");
+        let image = new Image();
+        let originalFileName = "";
+    
+        document.body.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            elements.dragHint.style.display = "block";
+        });
+    
+        document.body.addEventListener("dragleave", () => {
+            elements.dragHint.style.display = "none";
+        });
+    
+        document.body.addEventListener("drop", (e) => {
+            e.preventDefault();
+            elements.dragHint.style.display = "none";
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith("image/")) loadImage(file);
+        });
+    
+        elements.imageInput.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (file) loadImage(file);
+        });
+    
+        function loadImage(file) {
+            originalFileName = file.name.substring(0, file.name.lastIndexOf(".")) || file.name;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                image.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    
+        image.onload = () => {
+            const { width, height } = image;
+            elements.beforeCanvas.width = elements.afterCanvas.width = width;
+            elements.beforeCanvas.height = elements.afterCanvas.height = height;
+    
+            beforeCtx.drawImage(image, 0, 0);
+            elements.canvasContainer.style.visibility = "visible";
+            elements.processButton.disabled = false;
+            elements.processButton.style.display = "inline-block";
+            elements.clearButton.style.display = "inline-block";
+        };
+    
+        elements.processButton.addEventListener("click", () => {
+            const percentValue = parseFloat(elements.percentInput.value);
+            if (isNaN(percentValue) || percentValue < 0 || percentValue > 100) {
+                alert("Please enter a valid percentage between 0 and 100.");
+                return;
+            }
+            const fraction = percentValue / 100;
+            const imageData = beforeCtx.getImageData(0, 0, elements.beforeCanvas.width, elements.beforeCanvas.height);
+            const { data } = imageData;
+            const threshold = Math.round(255 * fraction);
+    
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i] < threshold && data[i + 1] < threshold && data[i + 2] < threshold) {
+                    data[i] = data[i + 1] = data[i + 2] = threshold;
+                }
+            }
+    
+            afterCtx.putImageData(imageData, 0, 0);
+    
+            const downloadLink = document.createElement("a");
+            const fileExtension = image.src.substring(image.src.indexOf("image/") + 6, image.src.indexOf(";base64"));
+            downloadLink.href = elements.afterCanvas.toDataURL(`image/${fileExtension}`);
+            downloadLink.download = `${originalFileName}_processed_${percentValue}.` + fileExtension;
+            downloadLink.click();
+        });
+    
+        elements.clearButton.addEventListener("click", () => {
+            elements.canvasContainer.style.visibility = "hidden";
+            elements.processButton.disabled = true;
+            elements.processButton.style.display = "none";
+            elements.clearButton.style.display = "none";
+            beforeCtx.clearRect(0, 0, elements.beforeCanvas.width, elements.beforeCanvas.height);
+            afterCtx.clearRect(0, 0, elements.afterCanvas.width, elements.afterCanvas.height);
+        });
+    </script>
+</body>
+</html>
