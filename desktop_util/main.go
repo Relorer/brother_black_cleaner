@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/sqweek/dialog"
+	"github.com/ncruces/zenity"
 )
 
 var percent float32 = 0.055
@@ -20,17 +20,29 @@ var max float32 = 65535 * percent
 var maxInt16 uint16 = uint16(max)
 
 func main() {
-	filePath, err := dialog.File().Filter("Image Files", "jpg", "jpeg", "png").Load()
+	filePaths, err := zenity.SelectFileMultiple(
+		zenity.Title("Select Image Files"),
+		zenity.FileFilter{
+			Name: "Image Files",
+			Patterns: []string{
+				"*.jpg",
+				"*.jpeg",
+				"*.png",
+			},
+		},
+	)
 	if err != nil {
-		log.Fatalf("Failed to select file: %v", err)
+		log.Fatalf("Failed to select files: %v", err)
 	}
 
-	fileName := filepath.Base(filePath)
+	for _, filePath := range filePaths {
+		fileName := filepath.Base(filePath)
 
-	if isImage(fileName) {
-		processImage(filePath)
-	} else {
-		log.Println("The selected file is not suitable for processing.")
+		if isImage(fileName) {
+			processImage(filePath)
+		} else {
+			log.Printf("The selected file is not suitable for processing: %s", filePath)
+		}
 	}
 }
 
