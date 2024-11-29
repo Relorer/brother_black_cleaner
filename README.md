@@ -2,7 +2,7 @@
 
 You can try it online: https://relorer.github.io/brother_black_cleaner/
 
-**But I recommend using the desktop version of the program, as js (web version) slightly degrades the quality of the original photo.**
+**But I recommend using [the desktop version](https://github.com/Relorer/brother_black_cleaner/releases/tag/v1.0.0) of the program, as js (web version) slightly degrades the quality of the original photo.**
 
 My *Brother* printer prints an uneven black gradient. See the photo below.
 
